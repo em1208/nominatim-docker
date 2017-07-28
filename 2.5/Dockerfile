@@ -40,16 +40,18 @@ RUN rm -rf /var/www/html/* && ./src/utils/setup.php --create-website /var/www/ht
 # Apache configure
 COPY nominatim.conf /etc/apache2/sites-enabled/000-default.conf
 
+#Postgres configure
+COPY postgresql.conf /etc/postgresql/9.3/main
+
 # Load initial data
-ENV PBF_DATA http://download.geofabrik.de/europe/monaco-latest.osm.pbf
-RUN curl -L $PBF_DATA --create-dirs -o /app/src/data.osm.pbf
+COPY europe-latest.osm.pbf /app/src/data.osm.pbf
 RUN service postgresql start && \
     sudo -u postgres psql postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='nominatim'" | grep -q 1 || sudo -u postgres createuser -s nominatim && \
     sudo -u postgres psql postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='www-data'" | grep -q 1 || sudo -u postgres createuser -SDR www-data && \
     sudo -u postgres psql postgres -c "DROP DATABASE IF EXISTS nominatim" && \
     useradd -m -p password1234 nominatim && \
     chown -R nominatim:nominatim ./src && \
-    sudo -u nominatim ./src/utils/setup.php --osm-file /app/src/data.osm.pbf --all --threads 2 && \
+    sudo -u nominatim ./src/utils/setup.php --osm-file /app/src/data.osm.pbf --all --threads 60 && \
     service postgresql stop
 
 EXPOSE 5432
